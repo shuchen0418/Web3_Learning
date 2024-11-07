@@ -70,6 +70,7 @@
 这些是 Go Ethereum 中 `eth_sendRawTransaction` 接口到交易池处理和存储交易的主要代码路径。
 
 ### 2. 交易被保存后，如何被选中？
+
 在执行层客户端中，矿工或验证者从交易池中选择优先级较高的交易进行打包。Geth 中交易选择的逻辑由交易池根据 **gas 价格** 和 **nonce 顺序** 来决定。
 
 对应代码位于 `core/tx_pool.go` 文件中的 `Pending` 方法，它返回可以立即打包进区块的交易。
@@ -96,6 +97,7 @@ func ApplyTransaction(...) error {
 ```
 
 ### 3. 一个交易消耗的 gas 如何计算？是什么时候从 sender 账户扣除？
+
 以太坊中交易的 gas 计算在执行交易时逐步累加。每个操作（如计算、存储写入等）都有一个固定的 gas 消耗量，详见 `EVM` 虚拟机的相关代码。Gas 是在交易执行过程中逐步扣除的。
 
 主要代码在 `core/vm/evm.go` 文件中：
@@ -114,6 +116,7 @@ func (evm *EVM) Call(...) ([]byte, error) {
 Gas 在执行结束后，将总消耗的 gas 从 sender 账户扣除。
 
 ### 4. 创建合约交易和普通交易处理方式的区别？
+
 创建合约交易和普通交易在处理方式上不同，创建合约的交易 `to` 字段为空，`data` 字段包含合约字节码。执行时，会在区块链上分配一个新的地址，并将合约字节码存储在该地址。
 
 主要代码在 `core/state_processor.go` 中的 `ApplyTransaction` 中处理普通交易和合约创建交易的区别：
@@ -134,7 +137,9 @@ func ApplyTransaction(...) error {
 ```
 
 ### 5. 创建合约有什么限制？
+
 以太坊对合约创建有以下限制：
+
 1. **Gas 上限**：创建合约需要足够的 gas 来支付字节码存储和执行费用。
 2. **合约大小限制**：合约的字节码大小不能超过 24 KB（EIP-170）。
 
@@ -152,6 +157,7 @@ func (evm *EVM) Create(...) ([]byte, common.Address, error) {
 ```
 
 ### 6. 交易是怎么被广播给其他执行层客户端的？
+
 交易在接收到后会通过 P2P 网络进行广播。Geth 使用的是一个基于 Kademlia 的 P2P 网络，节点之间会互相同步交易。相关代码位于 `eth/handler.go` 中：
 
 ```go
@@ -165,6 +171,7 @@ func (pm *ProtocolManager) BroadcastTx(tx *types.Transaction) {
 当交易被验证有效后，它会被广播给与该节点连接的其他节点，直到整个网络中所有节点都接收到该交易。
 
 ### 7. PoW（Proof of Work）与 PoS（Proof of Stake）？
+
 - **PoW**：在工作量证明（PoW）中，矿工通过计算哈希值来竞争找到一个有效的 nonce。核心代码逻辑位于 `consensus/ethash` 包中。
 
 ```go
@@ -178,6 +185,7 @@ func (ethash *Ethash) Seal(...) {
 - **PoS**：权益证明（PoS）机制下，验证者根据质押的 ETH 数量来获得出块权。相关逻辑位于 Prysm 客户端中，Geth 负责执行层的交易处理。
 
 ### 8. PoW 时期，矿工如何赚取收益？收益什么时候被添加到账户？
+
 在 PoW 中，矿工通过成功挖出一个区块来获得区块奖励和交易手续费。收益会在区块被打包并成功广播到网络后添加到账户中。相关逻辑在 `core/blockchain.go` 中：
 
 ```go
@@ -190,6 +198,7 @@ func (bc *BlockChain) FinalizeBlock(...) error {
 ```
 
 ### 9. PoW 时期，如何产生一个新块？并把区块广播出去？
+
 在 PoW 中，矿工通过不断尝试不同的 nonce 来寻找一个符合目标难度的区块哈希值。找到有效哈希值后，会生成一个新区块并通过 P2P 网络进行广播。
 
 主要代码在 `consensus/ethash/worker.go` 中：
@@ -204,6 +213,7 @@ func (w *worker) commitNewWork() {
 ```
 
 ### 10. 合并到 PoS 后，新区块如何同步？
+
 在 PoS 中，共识层验证者提议并验证新区块。新区块会通过共识层客户端（如 Prysm）进行同步和验证。Geth 作为执行层客户端，处理交易执行和状态更新。共识层通过 `Engine API` 与执行层进行通信，相关代码在 `consensus/engine.go` 中。
 
 ```go
@@ -311,6 +321,8 @@ a := [...]int {1,2,3,4,5}
 
 修改就是a[索引] = ?  方法中作为参数传入时，修改只在方法内生效，要想全局改变原来的数组值就要传入指针
 
+### 性能分析
+
 #### benchmark 基准测试
 
  总结：
@@ -371,6 +383,8 @@ a := [...]int {1,2,3,4,5}
 - 可通过在 `go test ` 中添加参数 `-cpuprofile=$FILE,-memprofile=$FILE,-blockprofile=$FILE` 生成相应的 profile 文件
 - 生成的 profile 文件同样可通过 web 页面或交互模式查看分析数据
 
+### 常用数据结构
+
 #### 字符串拼接性能及原理
 
 总结：
@@ -426,6 +440,8 @@ reflect在取结构体的每个字段时，尽量用Field()而不是FieldByName(
 
 4.结构体中的空结构体不要放在最后
 
+### 并发编程
+
 #### 读写锁和互斥锁的性能比较
 
 总结：
@@ -449,3 +465,38 @@ reflect在取结构体的每个字段时，尽量用Field()而不是FieldByName(
 3.设计函数多段执行，执行一段代码就用select语句，执行不成功就直接default：return，以免超时goroutine阻塞，不能退出造成持续内存占用
 
 #### 如何退出协程 goroutine (其他场景)
+
+总结:
+
+1.暴力退出：直接close(chan)，如果panic就defer中recover
+
+2.礼貌退出：写一个结构体包含chan 和 sync.Once，确保这个chan只会被关闭一次，以免panic
+
+3.优雅退出：1发送者 n接收者的情况，1发送者去关闭；n发送者 1接收者，这个接收者通过额外的goroutine通知发送者不要发送数据；n发送者 m接收者 任意一个goroutine都可以去通过一个额外的goroutine来通知每个goroutine
+
+#### 控制协程(goroutine)的并发数量
+
+总结：
+
+如果不控制协程的并发数量，会导致内存被耗尽，所以我们可以通过带有缓冲区的chan来控制goroutine的并发数量，或者使用第三方的库，用pool技术。我们也可以修改系统参数，比如虚拟内存、修改同时打开文件数等
+
+#### Go sync.Pool
+
+总结：
+
+使用sync.Pool可以减少内存分配，减少GC压力
+
+使用sync.Pool：1.声明对象池 2.Get从对象池中拿 Put放回对象池
+
+#### Go sync.Once
+
+总结：
+
+sync.Once是让函数全局只执行一次，多用于控制变量的初始化 变量须满足的三个条件：1.第一次访问的时候初始化；2.变量初始化过程中所有读都会阻塞直到初始化完成；3.变量只初始化一次，后常驻内存中
+
+原理：就是一个标志有没有执行的flag以及互斥锁
+
+一个结构体中要是函数经常被使用，可以把函数声明在第一个字段，运行更快
+
+#### Go sync.Cond
+
