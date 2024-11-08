@@ -500,3 +500,8 @@ sync.Once是让函数全局只执行一次，多用于控制变量的初始化 �
 
 #### Go sync.Cond
 
+总结：
+
+sync.Cond也是同步锁 ，里面提供Lock()、UnLock()、Wait()、Broadcast()方法
+
+解决多个goroutine等待一个消息的问题，多个goroutine进入Wait等待，等待数据完成的goroutine完成后Broadcast给多个goroutine
